@@ -27,30 +27,32 @@ def register_view(request):
 
 def login_view(request):
     if request.method == "POST":
-        form = LoginForm(request.POST)
+        # TODO: 1. /login로 접근하면 로그인 페이지를 통해 로그인이 되게 해주세요
+        # TODO: 2. login 할 때 form을 활용해주세요		
+        form = LoginForm(request, request.POST)
+        msg = "가입되어 있지 않거나 로그인 정보가 잘못 되었습니다."
         if form.is_valid():
             username = form.cleaned_data.get("username")
-            user = User.objects.get(username=username)
-            login(request, user)
-            request.session["user"] = username
-            return HttpResponseRedirect("/")
+            raw_password = form.cleaned_data.get("password")
+            user = authenticate(username=username, password=raw_password)
+            if user is not None:
+                msg = "로그인 성공"
+                login(request, user)
+        return render(request, "login.html", {"form": form, "msg": msg})				
     else:
         form = LoginForm()
     return render(request, "login.html", {"form": form})
 
 
 def logout_view(request):
-    if "user" in request.session:
-        del request.session["user"]
-    logout(request)
+    logout(request)				
     return HttpResponseRedirect("/login")
 
 
-@login_required(login_url="/login")
+@login_required
 def user_list_view(request):
-    page = int(request.GET.get("page", 1))
-    users = User.objects.all().order_by("-id")
-    paginator = Paginator(users, 3)
+    page = int(request.GET.get("p", 1))
+    users = Users.objects.all().order_by("-id")
+    paginator = paginator(users, 10)
     users = paginator.get_page(page)
-
     return render(request, "users.html", {"users": users})
